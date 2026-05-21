@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Pluralistic Program Description · LLO 8230</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500;1,8..60,600&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="styles.css" />
+
+<style>
+  html, body {
+    margin: 0; padding: 0;
+    background: #1c1c1c;
+    overflow: hidden;
+    height: 100%;
+    font-family: "Inter Tight", -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  /* Letterboxed stage: 1920×1080 slide scaled to fit any viewport. */
+  #stage {
+    position: fixed; inset: 0;
+    display: grid; place-items: center;
+  }
+  #slide-frame {
+    width: 1920px; height: 1080px;
+    transform-origin: center center;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.45), 0 6px 18px rgba(0,0,0,0.25);
+    background: #FBFAF7;
+    position: relative;
+  }
+  #app { width: 100%; height: 100%; }
+
+  /* The note-card placeholder text — only shown when card is empty */
+  .note-card .note-card__text:empty::before {
+    content: attr(data-placeholder);
+    color: #8E8779;
+    font-weight: 500;
+    text-align: center;
+    display: block;
+    width: 100%;
+  }
+
+  @media print {
+    html, body { background: #fff !important; overflow: visible !important; }
+    #stage { position: static !important; display: block !important; }
+    #slide-frame { transform: none !important; box-shadow: none !important; width: 100% !important; height: 100% !important; }
+  }
+</style>
+
+<!-- React + Babel (pinned versions, integrity hashes) -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<div id="stage">
+  <div id="slide-frame">
+    <div id="app"></div>
+  </div>
+</div>
+
+<script type="text/babel" src="worksheet-core.jsx"></script>
+<script type="text/babel" src="pluralistic-worksheet.jsx"></script>
+
+<script type="text/babel">
+  function App() {
+    return <window.PluralisticDescription />;
+  }
+  const root = ReactDOM.createRoot(document.getElementById("app"));
+  root.render(<App />);
+</script>
+
+<script>
+  // Scale the 1920×1080 frame to fit whatever window we're in (letterbox).
+  (function () {
+    const frame = document.getElementById('slide-frame');
+    const SLIDE_W = 1920, SLIDE_H = 1080;
+    function fit() {
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const s = Math.min(vw / SLIDE_W, vh / SLIDE_H);
+      frame.style.transform = `scale(${s})`;
+    }
+    window.addEventListener('resize', fit);
+    fit();
+  })();
+</script>
+
+</body>
+</html>
