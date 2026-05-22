@@ -144,9 +144,9 @@ function Section({ def, values, setBox }: {
   setBox: (id: SectionId, i: number, v: string) => void;
 }) {
   return (
-    <section style={{ display: "grid", gridTemplateRows: "auto 1fr", gap: 10, paddingTop: 10, borderTop: "1px solid var(--vu-rule)" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", alignItems: "baseline", gap: 28 }}>
-        <h2 style={{ margin: 0, fontFamily: "var(--font-source-serif-4), 'Source Serif 4', Georgia, serif", fontStyle: "italic", fontWeight: 500, color: "var(--vu-oak)", fontSize: 44, lineHeight: 1, letterSpacing: "-0.02em" }}>
+    <section style={{ display: "grid", gridTemplateRows: "auto 1fr", gap: 14, paddingTop: 10, borderTop: "1px solid var(--vu-rule)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", alignItems: "center", gap: 28 }}>
+        <h2 style={{ margin: 0, fontFamily: "var(--font-source-serif-4), 'Source Serif 4', Georgia, serif", fontStyle: "italic", fontWeight: 500, color: "var(--vu-oak)", fontSize: 40, lineHeight: 1.15, letterSpacing: "-0.02em" }}>
           {def.title}
         </h2>
         <p style={{ margin: 0, fontSize: 15.5, lineHeight: 1.4, color: "var(--vu-ink)", maxWidth: 1420 }}>
@@ -342,7 +342,7 @@ export function PluralisticWorksheet() {
                 <span style={{ opacity: 0.4 }}>&mdash;</span>
                 <span style={{ color: "var(--vu-oak)" }}>LLO 8230: Program Evaluation</span>
               </div>
-              <h1 style={{ margin: "6px 0 0", fontFamily: "var(--font-inter-tight), 'Inter Tight', sans-serif", fontSize: 54, lineHeight: 0.95, letterSpacing: "-0.035em", fontWeight: 700, color: "var(--vu-black)" }}>
+              <h1 style={{ margin: "6px 0 0", fontFamily: "var(--font-inter-tight), 'Inter Tight', sans-serif", fontSize: 52, lineHeight: 1.05, letterSpacing: "-0.035em", fontWeight: 700, color: "var(--vu-black)" }}>
                 Pluralistic Program Description.
               </h1>
               <p style={{ margin: "10px 0 0", maxWidth: 1640, fontSize: 16.5, lineHeight: 1.45, color: "var(--vu-ink)" }}>
