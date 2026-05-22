@@ -172,11 +172,44 @@ function Section({ def, values, setBox }: {
 function ExportToolbar({ getSlide }: { getSlide: () => HTMLElement | null }) {
   const [busy, setBusy] = useState<string | null>(null);
 
-  const captureCanvas = async () => {
+  const captureCanvas = async (): Promise<HTMLCanvasElement> => {
     const el = getSlide();
     if (!el) throw new Error("no slide");
+
+    // Wait for fonts so text renders correctly
+    await document.fonts.ready;
+
+    // Clone the slide into an off-screen, un-transformed container.
+    // Capturing el directly fails because its parent has transform:scale(s),
+    // which makes html2canvas measure everything at the scaled-down size and
+    // then stretch it back up, garbling all the text.
+    const offscreen = document.createElement("div");
+    offscreen.style.cssText = `position:fixed;left:${-(SLIDE_W + 20)}px;top:0;width:${SLIDE_W}px;height:${SLIDE_H}px;overflow:visible;z-index:-9999;pointer-events:none;`;
+    const clone = el.cloneNode(true) as HTMLElement;
+    clone.style.width = `${SLIDE_W}px`;
+    clone.style.height = `${SLIDE_H}px`;
+    // Remove the export toolbar from the capture
+    clone.querySelector("[data-toolbar]")?.remove();
+    offscreen.appendChild(clone);
+    document.body.appendChild(offscreen);
+
+    // Two frames so the browser has time to lay out and paint the clone
+    await new Promise<void>((r) => requestAnimationFrame(() => { requestAnimationFrame(() => r()); }));
+
     const { default: html2canvas } = await import("html2canvas");
-    return html2canvas(el, { width: SLIDE_W, height: SLIDE_H, scale: 1, useCORS: true });
+    const canvas = await html2canvas(clone, {
+      x: 0, y: 0,
+      width: SLIDE_W, height: SLIDE_H,
+      windowWidth: SLIDE_W, windowHeight: SLIDE_H,
+      scale: 1,
+      useCORS: true,
+      allowTaint: true,
+      logging: false,
+      backgroundColor: "#FBFAF7",
+    });
+
+    document.body.removeChild(offscreen);
+    return canvas;
   };
 
   const exportPDF = () => {
@@ -244,7 +277,7 @@ function ExportToolbar({ getSlide }: { getSlide: () => HTMLElement | null }) {
   );
 
   return (
-    <div style={{ position: "absolute", top: 18, right: 18, zIndex: 50, display: "flex", gap: 8 }}>
+    <div data-toolbar style={{ position: "absolute", top: 18, right: 18, zIndex: 50, display: "flex", gap: 8 }}>
       <button style={btnStyle} onClick={exportPDF} title="Print or save as PDF" disabled={!!busy}>
         <PrinterIcon /> PDF
       </button>
