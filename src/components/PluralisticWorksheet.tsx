@@ -75,24 +75,22 @@ function usePPDState(): [WorksheetState, (sectionId: SectionId, idx: number, val
   return [state, setBox];
 }
 
-// ── Scale-to-fit: returns scale and signals when it's ready ──────────────────
-function useSlideScale(frameRef: React.RefObject<HTMLDivElement | null>) {
-  const [ready, setReady] = useState(false);
+// ── Scale-to-fit ──────────────────────────────────────────────────────────────
+// Returns the current scale factor (0 until first measurement).
+// The frame uses position:absolute + translate(-50%,-50%) + scale(s) so that
+// centering and scaling are computed together — grid/flex centering gets it
+// wrong because CSS layout uses the pre-scale size (1920px) for placement.
+function useSlideScale() {
+  const [scale, setScale] = useState(0);
 
   useEffect(() => {
-    const fit = () => {
-      const frame = frameRef.current;
-      if (!frame) return;
-      const s = Math.min(window.innerWidth / SLIDE_W, window.innerHeight / SLIDE_H);
-      frame.style.transform = `scale(${s})`;
-      setReady(true);
-    };
+    const fit = () => setScale(Math.min(window.innerWidth / SLIDE_W, window.innerHeight / SLIDE_H));
     window.addEventListener("resize", fit);
     fit();
     return () => window.removeEventListener("resize", fit);
-  }, [frameRef]);
+  }, []);
 
-  return ready;
+  return scale;
 }
 
 // ── Note card ────────────────────────────────────────────────────────────────
@@ -263,22 +261,25 @@ function ExportToolbar({ getSlide }: { getSlide: () => HTMLElement | null }) {
 // ── Top-level worksheet ──────────────────────────────────────────────────────
 export function PluralisticWorksheet() {
   const [state, setBox] = usePPDState();
-  const frameRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<HTMLDivElement>(null);
-  const ready = useSlideScale(frameRef);
-
+  const scale = useSlideScale();
   return (
-    <div style={{ position: "fixed", inset: 0, display: "grid", placeItems: "center", background: "#1c1c1c", overflow: "hidden" }}>
+    <div style={{ position: "fixed", inset: 0, background: "#1c1c1c", overflow: "hidden" }}>
       <div
-        ref={frameRef}
         style={{
-          width: SLIDE_W, height: SLIDE_H,
+          position: "absolute",
+          left: "50%",
+          top: "50%",
+          width: SLIDE_W,
+          height: SLIDE_H,
           transformOrigin: "center center",
+          // translate(-50%,-50%) centers the 1920×1080 origin on the viewport midpoint,
+          // then scale(s) shrinks/grows it in place — both in a single transform so
+          // the centering math is always correct regardless of viewport size.
+          transform: `translate(-50%, -50%) scale(${scale})`,
+          opacity: scale > 0 ? 1 : 0,
           boxShadow: "0 30px 80px rgba(0,0,0,0.45), 0 6px 18px rgba(0,0,0,0.25)",
-          position: "relative",
           background: "var(--vu-paper)",
-          // Hidden until scale is calculated to avoid unscaled flash
-          visibility: ready ? "visible" : "hidden",
         }}
       >
         <div
