@@ -14,7 +14,7 @@ const SECTIONS = [
   {
     id: "program" as const,
     title: "Program",
-    lead: "The ‘program’ is simply a coordinated set of activities, resources, and experiences designed to produce an outcome (CDC, 1999). It can be an intervention, a policy, a process, etc. Here, outline goals and objectives, describe key activities, and identify the target population and stakeholders.",
+    lead: "The 'program' is simply a coordinated set of activities, resources, and experiences designed to produce an outcome (CDC, 1999). It can be an intervention, a policy, a process, etc. Here, outline goals and objectives, describe key activities, and identify the target population and stakeholders.",
     example: "Ex) A single-session workshop addresses audience analysis and communication strategies for frontline leaders, with a goal of increasing information sharing and collaborative problem-solving in meetings.",
   },
   {
@@ -35,9 +35,11 @@ type SectionId = (typeof SECTIONS)[number]["id"];
 
 const BOXES_PER_ROW = 6;
 const STORAGE_KEY = "ws.pluralisticProgram.v1";
+const SLIDE_W = 1920;
+const SLIDE_H = 1080;
 
 const INTRO =
-  "The goal is to ‘tell the story’ of the program in context and from multiple perspectives. In the end, this should be both familiar and intriguing to your evaluation sponsors. The way that you weave the story of the program as related to the problem it addresses, the current situation, and the broader context will set the stage for the scope and focus of the evaluation design.";
+  "The goal is to 'tell the story' of the program in context and from multiple perspectives. In the end, this should be both familiar and intriguing to your evaluation sponsors. The way that you weave the story of the program as related to the problem it addresses, the current situation, and the broader context will set the stage for the scope and focus of the evaluation design.";
 
 // ── State ────────────────────────────────────────────────────────────────────
 type WorksheetState = Record<SectionId, string[]>;
@@ -52,10 +54,9 @@ function makeDefaults(): WorksheetState {
 
 function usePPDState(): [WorksheetState, (sectionId: SectionId, idx: number, value: string) => void] {
   const defaults = makeDefaults();
-
   const [state, setState] = useState<WorksheetState>(() => {
     try {
-      const raw = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null;
+      const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) return { ...defaults, ...JSON.parse(raw) };
     } catch (_) {}
     return defaults;
@@ -74,10 +75,28 @@ function usePPDState(): [WorksheetState, (sectionId: SectionId, idx: number, val
   return [state, setBox];
 }
 
+// ── Scale-to-fit: returns scale and signals when it's ready ──────────────────
+function useSlideScale(frameRef: React.RefObject<HTMLDivElement | null>) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const fit = () => {
+      const frame = frameRef.current;
+      if (!frame) return;
+      const s = Math.min(window.innerWidth / SLIDE_W, window.innerHeight / SLIDE_H);
+      frame.style.transform = `scale(${s})`;
+      setReady(true);
+    };
+    window.addEventListener("resize", fit);
+    fit();
+    return () => window.removeEventListener("resize", fit);
+  }, [frameRef]);
+
+  return ready;
+}
+
 // ── Note card ────────────────────────────────────────────────────────────────
-function NoteCard({
-  value, onChange, placeholderExample, isExample,
-}: {
+function NoteCard({ value, onChange, placeholderExample, isExample }: {
   value: string;
   onChange: (v: string) => void;
   placeholderExample: string;
@@ -94,7 +113,6 @@ function NoteCard({
         minHeight: 96,
         display: "flex",
         alignItems: isExample ? "center" : "flex-start",
-        position: "relative",
       }}
     >
       <Editable
@@ -122,66 +140,22 @@ function NoteCard({
 }
 
 // ── Section row ──────────────────────────────────────────────────────────────
-function Section({
-  def, values, setBox,
-}: {
+function Section({ def, values, setBox }: {
   def: (typeof SECTIONS)[number];
   values: string[];
   setBox: (id: SectionId, i: number, v: string) => void;
 }) {
   return (
-    <section
-      style={{
-        display: "grid",
-        gridTemplateRows: "auto 1fr",
-        gap: 10,
-        paddingTop: 10,
-        borderTop: "1px solid var(--vu-rule)",
-      }}
-    >
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "220px 1fr",
-          alignItems: "baseline",
-          gap: 28,
-        }}
-      >
-        <h2
-          style={{
-            margin: 0,
-            fontFamily: "var(--font-source-serif-4), 'Source Serif 4', Georgia, serif",
-            fontStyle: "italic",
-            fontWeight: 500,
-            color: "var(--vu-oak)",
-            fontSize: 44,
-            lineHeight: 1,
-            letterSpacing: "-0.02em",
-          }}
-        >
+    <section style={{ display: "grid", gridTemplateRows: "auto 1fr", gap: 10, paddingTop: 10, borderTop: "1px solid var(--vu-rule)" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", alignItems: "baseline", gap: 28 }}>
+        <h2 style={{ margin: 0, fontFamily: "var(--font-source-serif-4), 'Source Serif 4', Georgia, serif", fontStyle: "italic", fontWeight: 500, color: "var(--vu-oak)", fontSize: 44, lineHeight: 1, letterSpacing: "-0.02em" }}>
           {def.title}
         </h2>
-        <p
-          style={{
-            margin: 0,
-            fontSize: 15.5,
-            lineHeight: 1.4,
-            color: "var(--vu-ink)",
-            maxWidth: 1420,
-          }}
-        >
+        <p style={{ margin: 0, fontSize: 15.5, lineHeight: 1.4, color: "var(--vu-ink)", maxWidth: 1420 }}>
           {def.lead}
         </p>
       </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: `repeat(${BOXES_PER_ROW}, 1fr)`,
-          gap: 14,
-          alignItems: "stretch",
-        }}
-      >
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${BOXES_PER_ROW}, 1fr)`, gap: 14, alignItems: "stretch" }}>
         {Array.from({ length: BOXES_PER_ROW }).map((_, i) => (
           <NoteCard
             key={i}
@@ -196,48 +170,94 @@ function Section({
   );
 }
 
-// ── Export button ────────────────────────────────────────────────────────────
-function ExportButton({ getTarget }: { getTarget: () => HTMLElement | null }) {
-  const onClick = () => {
-    const target = getTarget();
-    if (!target) return;
-    target.classList.add("print-target");
+// ── Export toolbar ───────────────────────────────────────────────────────────
+function ExportToolbar({ getSlide }: { getSlide: () => HTMLElement | null }) {
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const captureCanvas = async () => {
+    const el = getSlide();
+    if (!el) throw new Error("no slide");
+    const { default: html2canvas } = await import("html2canvas");
+    return html2canvas(el, { width: SLIDE_W, height: SLIDE_H, scale: 1, useCORS: true });
+  };
+
+  const exportPDF = () => {
+    const el = getSlide();
+    if (!el) return;
+    el.classList.add("print-target");
     document.body.classList.add("print-slide");
     requestAnimationFrame(() => {
       window.print();
       setTimeout(() => {
-        target.classList.remove("print-target");
+        el.classList.remove("print-target");
         document.body.classList.remove("print-slide");
       }, 200);
     });
   };
-  return (
-    <button className="ws-export" onClick={onClick} title="Print or save as PDF">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={14} height={14} aria-hidden="true">
-        <path d="M4 3h8v4H4z" />
-        <path d="M4 11h8v3H4z" />
-        <path d="M2 7h12v4H2z" />
-        <circle cx="11.5" cy="9" r=".6" fill="currentColor" stroke="none" />
-      </svg>
-      Export PDF
-    </button>
-  );
-}
 
-// ── Scale-to-fit ─────────────────────────────────────────────────────────────
-function useSlideScale(frameRef: React.RefObject<HTMLDivElement | null>) {
-  useEffect(() => {
-    const W = 1920, H = 1080;
-    const fit = () => {
-      const frame = frameRef.current;
-      if (!frame) return;
-      const s = Math.min(window.innerWidth / W, window.innerHeight / H);
-      frame.style.transform = `scale(${s})`;
-    };
-    window.addEventListener("resize", fit);
-    fit();
-    return () => window.removeEventListener("resize", fit);
-  }, [frameRef]);
+  const exportPNG = async () => {
+    setBusy("png");
+    try {
+      const canvas = await captureCanvas();
+      const link = document.createElement("a");
+      link.download = "Pluralistic-Program-Description.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    } finally { setBusy(null); }
+  };
+
+  const exportPPTX = async () => {
+    setBusy("pptx");
+    try {
+      const canvas = await captureCanvas();
+      const imgData = canvas.toDataURL("image/png");
+      const { default: PptxGenJS } = await import("pptxgenjs");
+      const pptx = new PptxGenJS();
+      pptx.layout = "LAYOUT_WIDE"; // 13.33" × 7.5" widescreen 16:9
+      const slide = pptx.addSlide();
+      slide.addImage({ data: imgData, x: 0, y: 0, w: 13.33, h: 7.5 });
+      await pptx.writeFile({ fileName: "Pluralistic-Program-Description.pptx" });
+    } finally { setBusy(null); }
+  };
+
+  const btnStyle: React.CSSProperties = {
+    display: "inline-flex", alignItems: "center", gap: 6,
+    padding: "9px 14px", borderRadius: 999, border: "none",
+    background: "var(--vu-black)", color: "var(--vu-cream)",
+    fontFamily: "var(--font-inter-tight), 'Inter Tight', sans-serif",
+    fontSize: 13, fontWeight: 600, letterSpacing: "0.02em",
+    cursor: "pointer", whiteSpace: "nowrap" as const,
+    boxShadow: "0 6px 20px rgba(28,28,28,0.18)",
+    transition: "transform 0.14s, box-shadow 0.14s",
+    opacity: busy ? 0.7 : 1,
+  };
+
+  const PrinterIcon = () => (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={14} height={14} aria-hidden="true">
+      <path d="M4 3h8v4H4z"/><path d="M4 11h8v3H4z"/><path d="M2 7h12v4H2z"/>
+      <circle cx="11.5" cy="9" r=".6" fill="currentColor" stroke="none"/>
+    </svg>
+  );
+
+  const DownloadIcon = () => (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" width={14} height={14} aria-hidden="true">
+      <path d="M8 2v8M5 7l3 3 3-3"/><path d="M3 13h10"/>
+    </svg>
+  );
+
+  return (
+    <div style={{ position: "absolute", top: 18, right: 18, zIndex: 50, display: "flex", gap: 8 }}>
+      <button style={btnStyle} onClick={exportPDF} title="Print or save as PDF" disabled={!!busy}>
+        <PrinterIcon /> PDF
+      </button>
+      <button style={btnStyle} onClick={exportPNG} title="Download as PNG image" disabled={!!busy}>
+        <DownloadIcon /> {busy === "png" ? "…" : "PNG"}
+      </button>
+      <button style={btnStyle} onClick={exportPPTX} title="Download as PowerPoint" disabled={!!busy}>
+        <DownloadIcon /> {busy === "pptx" ? "…" : "PPTX"}
+      </button>
+    </div>
+  );
 }
 
 // ── Top-level worksheet ──────────────────────────────────────────────────────
@@ -245,35 +265,26 @@ export function PluralisticWorksheet() {
   const [state, setBox] = usePPDState();
   const frameRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<HTMLDivElement>(null);
-  useSlideScale(frameRef);
+  const ready = useSlideScale(frameRef);
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        display: "grid",
-        placeItems: "center",
-        background: "#1c1c1c",
-      }}
-    >
+    <div style={{ position: "fixed", inset: 0, display: "grid", placeItems: "center", background: "#1c1c1c", overflow: "hidden" }}>
       <div
         ref={frameRef}
         style={{
-          width: 1920,
-          height: 1080,
+          width: SLIDE_W, height: SLIDE_H,
           transformOrigin: "center center",
           boxShadow: "0 30px 80px rgba(0,0,0,0.45), 0 6px 18px rgba(0,0,0,0.25)",
           position: "relative",
           background: "var(--vu-paper)",
+          // Hidden until scale is calculated to avoid unscaled flash
+          visibility: ready ? "visible" : "hidden",
         }}
       >
-        {/* Worksheet root */}
         <div
           ref={wsRef}
           style={{
-            width: "100%",
-            height: "100%",
+            width: "100%", height: "100%",
             background: "var(--vu-paper)",
             display: "grid",
             gridTemplateColumns: "16px 1fr",
@@ -284,104 +295,34 @@ export function PluralisticWorksheet() {
             color: "var(--vu-ink)",
           }}
         >
-          <ExportButton getTarget={() => wsRef.current} />
+          <ExportToolbar getSlide={() => wsRef.current} />
 
           {/* Gold gradient bar */}
-          <div
-            aria-hidden="true"
-            style={{ background: "linear-gradient(180deg, var(--vu-gold-d), var(--vu-gold))" }}
-          />
+          <div aria-hidden="true" style={{ background: "linear-gradient(180deg, var(--vu-gold-d), var(--vu-gold))" }} />
 
-          {/* Content */}
-          <div
-            style={{
-              padding: "32px 72px 28px 72px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 12,
-              minHeight: 0,
-            }}
-          >
-            {/* Header */}
+          {/* Main content */}
+          <div style={{ padding: "32px 72px 28px 72px", display: "flex", flexDirection: "column", gap: 12, minHeight: 0 }}>
             <header>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 14,
-                  fontSize: 12,
-                  letterSpacing: "0.18em",
-                  textTransform: "uppercase",
-                  color: "var(--vu-muted)",
-                  fontWeight: 700,
-                }}
-              >
+              <div style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase", color: "var(--vu-muted)", fontWeight: 700 }}>
                 <span>Vanderbilt Peabody College</span>
                 <span style={{ opacity: 0.4 }}>&mdash;</span>
                 <span style={{ color: "var(--vu-oak)" }}>LLO 8230: Program Evaluation</span>
               </div>
-              <h1
-                style={{
-                  margin: "6px 0 0",
-                  fontFamily: "var(--font-inter-tight), 'Inter Tight', sans-serif",
-                  fontSize: 54,
-                  lineHeight: 0.95,
-                  letterSpacing: "-0.035em",
-                  fontWeight: 700,
-                  color: "var(--vu-black)",
-                }}
-              >
+              <h1 style={{ margin: "6px 0 0", fontFamily: "var(--font-inter-tight), 'Inter Tight', sans-serif", fontSize: 54, lineHeight: 0.95, letterSpacing: "-0.035em", fontWeight: 700, color: "var(--vu-black)" }}>
                 Pluralistic Program Description.
               </h1>
-              <p
-                style={{
-                  margin: "10px 0 0",
-                  maxWidth: 1640,
-                  fontSize: 16.5,
-                  lineHeight: 1.45,
-                  color: "var(--vu-ink)",
-                }}
-              >
+              <p style={{ margin: "10px 0 0", maxWidth: 1640, fontSize: 16.5, lineHeight: 1.45, color: "var(--vu-ink)" }}>
                 {INTRO}
               </p>
             </header>
 
-            {/* Sections */}
-            <div
-              style={{
-                flex: 1,
-                display: "grid",
-                gridTemplateRows: "repeat(4, 1fr)",
-                gap: 10,
-                marginTop: 4,
-                minHeight: 0,
-              }}
-            >
+            <div style={{ flex: 1, display: "grid", gridTemplateRows: "repeat(4, 1fr)", gap: 10, marginTop: 4, minHeight: 0 }}>
               {SECTIONS.map((def) => (
-                <Section
-                  key={def.id}
-                  def={def}
-                  values={state[def.id] ?? []}
-                  setBox={setBox}
-                />
+                <Section key={def.id} def={def} values={state[def.id] ?? []} setBox={setBox} />
               ))}
             </div>
 
-            {/* Footer */}
-            <footer
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "baseline",
-                fontSize: 11,
-                letterSpacing: "0.16em",
-                textTransform: "uppercase",
-                color: "var(--vu-muted)",
-                fontWeight: 600,
-                paddingTop: 6,
-                borderTop: "1px solid var(--vu-rule)",
-              }}
-            >
+            <footer style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "var(--vu-muted)", fontWeight: 600, paddingTop: 6, borderTop: "1px solid var(--vu-rule)" }}>
               <span>Program Evaluation Design Portfolio Project</span>
             </footer>
           </div>
